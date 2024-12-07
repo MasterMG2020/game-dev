@@ -1,61 +1,58 @@
 extends CharacterBody2D
 
-const SPEED = 130.0
-const JUMP_VELOCITY = -300.0
-const DASH_SPEED = 300.0 # Dash velocity
-const DASH_TIME = 0.2 # Duration of the dash
-
-const WALL_SLIDE_SPEED = 50.0 # Speed of wall slide
-const JUMP_AWAY_FROM_WALL_SPEED = 50
-
-
-var wall_jump_boost_time = 0
-var is_wall_sliding = false
-
-var gravity = ProjectSettings.get_setting("physics/2d/default_gravity")
-var can_dash = true
-
-var jump_amount = 2 # number of jumps the player has
-var is_wall_jump = false
-
-# Movement parameters
-const MAX_SPEED: float = 200.0        # Top speed
-const ACCELERATION: float = 700.0   # Acceleration rate
-const DECELERATION: float = 1300.0   # Deceleration rate
-
-
-
 @onready var animated_sprite = $AnimatedSprite2D
 
-var is_dashing = false
-var dash_timer = 0.0
-var dash_direction = 0
+# Basic movement parameters
+const MAX_SPEED: float = 170.0        # Top speed
+const ACCELERATION: float = 700.0   # Acceleration rate
+const DECELERATION: float = 1700.0   # Deceleration rate
+
+# Advanced movement parameters
+const JUMP_VELOCITY: float = -300.0
+const JUMP_AMOUNT: int = 2 # number of jumps the player has
+const DASH_SPEED: float = 400.0 # Dash velocity
+const DASH_TIME: float = 0.2 # Duration of the dash
+
+# Wall slide parameters
+const WALL_SLIDE_SPEED: float = 50.0 # Speed of wall slide
+const JUMP_AWAY_FROM_WALL_SPEED: float = 100.0
+
+
+# Global movement  variable declaration
+var is_dashing: bool = false
+var can_dash: bool = true
+var dash_timer: float = 0.0
+var jump_amount: int = 0
 
 func _physics_process(delta):
+	var gravity: float = ProjectSettings.get_setting("physics/2d/default_gravity")
+	var direction = Input.get_axis("move_left", "move_right")
+
 	# Update dash timer
 	if is_dashing:
 		dash_timer -= delta
 		if dash_timer <= 0:
 			is_dashing = false
+			velocity.x = 0  # Stop the dash horizontal movement when it ends
 
-	
-	# Check if player has touched ground and update abilities acordingly
+	# Check if player has touched ground and update abilities accordingly
 	if is_on_floor():
-		jump_amount = 2
+		jump_amount = JUMP_AMOUNT
 		can_dash = true
 
-
-	
 	# Handle dash
 	if Input.is_action_just_pressed("dash") and not is_dashing and can_dash:
 		can_dash = false
-		start_dash()
+		start_dash(direction)
 	
 	wall_slide(delta)
+
+	# Handle jump
+	jump()
 	
-	# Get input direction: -1, 0, 1
-	var direction = Input.get_axis("move_left", "move_right")
-	
+	# Apply movement
+	movement(direction, delta)
+
 	# Flip the sprite
 	if direction > 0:
 		animated_sprite.flip_h = false
@@ -68,20 +65,15 @@ func _physics_process(delta):
 	# Add gravity if not dashing and not on floor
 	if not is_on_floor() and not is_dashing:
 		velocity.y += gravity * delta
-
-	# Apply movement
-	movement(direction, delta)
 	
-	# Handle jump
-	if !is_dashing:
-		jump()
-
-
+	# Move the player
 	move_and_slide()
 
 
 
 func jump():
+	if is_dashing:
+		return
 	if Input.is_action_just_pressed("jump"):
 		if jump_amount > 0:
 			velocity.y = JUMP_VELOCITY
@@ -93,19 +85,19 @@ func jump():
 			velocity.y = JUMP_VELOCITY
 			velocity.x = -JUMP_AWAY_FROM_WALL_SPEED
 
-
-func start_dash():
+func start_dash(dash_direction: float):
 	is_dashing = true
-	dash_timer = DASH_TIME
-	dash_direction = Input.get_axis("move_left", "move_right")
+	dash_timer = DASH_TIME  # Reset the dash timer
+	velocity.y = 0  # Neutralize vertical velocity to ignore gravity
 	if dash_direction == 0:
+		# Default to the direction the sprite is facing if no input
 		dash_direction = -1 if animated_sprite.flip_h else 1 
+	velocity.x = DASH_SPEED * dash_direction  # Set constant horizontal dash speed
+
+
 		
 func play_animations(direction):
-	if is_dashing:
-		#animated_sprite.play("dash") # put dash animation here when we have one
-		pass
-	elif is_on_floor():
+	if is_on_floor():
 		if direction == 0:
 			animated_sprite.play("idle")
 		else:
@@ -114,6 +106,8 @@ func play_animations(direction):
 		animated_sprite.play("jump")
 		
 func wall_slide(delta):
+	var is_wall_sliding: bool = false
+	
 	if is_on_wall() and not is_on_floor():
 		if Input.is_action_pressed("move_left") or Input.is_action_pressed("move_right"):
 			is_wall_sliding = true
@@ -128,14 +122,10 @@ func wall_slide(delta):
 		
 		
 func movement(direction: int, delta: float) -> void:
-	if is_dashing:
-		# Dash logic overrides velocity
-		velocity.x = dash_direction * DASH_SPEED
+	if direction != 0:
+		# Accelerate towards the target speed
+		var target_velocity = direction * MAX_SPEED
+		velocity.x = move_toward(velocity.x, target_velocity, ACCELERATION * delta)
 	else:
-		if direction != 0:
-			# Accelerate towards the target speed
-			var target_velocity = direction * MAX_SPEED
-			velocity.x = move_toward(velocity.x, target_velocity, ACCELERATION * delta)
-		else:
-			# Decelerate smoothly to 0 when no input is provided
-			velocity.x = move_toward(velocity.x, 0, DECELERATION * delta)
+		# Decelerate smoothly to 0 when no input is provided
+		velocity.x = move_toward(velocity.x, 0, DECELERATION * delta)
