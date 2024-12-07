@@ -5,7 +5,9 @@ const JUMP_VELOCITY = -300.0
 const DASH_SPEED = 300.0 # Dash velocity
 const DASH_TIME = 0.2 # Duration of the dash
 
+
 var gravity = ProjectSettings.get_setting("physics/2d/default_gravity")
+var can_dash = true
 
 @onready var animated_sprite = $AnimatedSprite2D
 
@@ -20,6 +22,10 @@ func _physics_process(delta):
 		if dash_timer <= 0:
 			is_dashing = false
 	
+	# Check if player has touched ground and update abilities acordingly
+	if is_on_floor():
+		can_dash = true
+	
 	# Add gravity if not dashing and not on floor
 	if not is_on_floor() and not is_dashing:
 		velocity.y += gravity * delta
@@ -29,8 +35,8 @@ func _physics_process(delta):
 		velocity.y = JUMP_VELOCITY
 
 	# Handle dash
-	if Input.is_action_just_pressed("dash") and not is_dashing:
-		print("test")
+	if Input.is_action_just_pressed("dash") and not is_dashing and can_dash:
+		can_dash = false
 		start_dash()
 
 	# Get input direction: -1, 0, 1
@@ -44,7 +50,8 @@ func _physics_process(delta):
 
 	# Play animations
 	if is_dashing:
-		animated_sprite.play("dash")
+		#animated_sprite.play("dash") # put dash animation here when we have one
+		pass
 	elif is_on_floor():
 		if direction == 0:
 			animated_sprite.play("idle")
