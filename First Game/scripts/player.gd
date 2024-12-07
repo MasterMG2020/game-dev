@@ -5,10 +5,14 @@ const JUMP_VELOCITY = -300.0
 const DASH_SPEED = 300.0 # Dash velocity
 const DASH_TIME = 0.2 # Duration of the dash
 
+const DOUBLE_JUMP_CONSISTANCY = 0.1 # lets the player prefor a double jump even if he is in the air for x seconds
+
 
 var gravity = ProjectSettings.get_setting("physics/2d/default_gravity")
 var can_dash = true
 var can_double_jump = true
+
+var air_time = 0
 
 @onready var animated_sprite = $AnimatedSprite2D
 
@@ -23,6 +27,12 @@ func _physics_process(delta):
 		if dash_timer <= 0:
 			is_dashing = false
 	
+	# keep track of air time to make double jumb more consistant
+	if not is_on_floor():
+		air_time += delta
+	else:
+		air_time = 0
+	
 	# Check if player has touched ground and update abilities acordingly
 	if is_on_floor():
 		can_dash = true
@@ -33,12 +43,12 @@ func _physics_process(delta):
 		velocity.y += gravity * delta
 
 	# Handle jump
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	if Input.is_action_just_pressed("jump") and air_time < DOUBLE_JUMP_CONSISTANCY:
 		velocity.y = JUMP_VELOCITY
 		
 	# Handle double jump
 	
-	if Input.is_action_just_pressed("jump") and can_double_jump and not is_on_floor():
+	if Input.is_action_just_pressed("jump") and can_double_jump and not is_on_floor() and air_time > DOUBLE_JUMP_CONSISTANCY:
 		can_double_jump = false
 		velocity.y = JUMP_VELOCITY
 
