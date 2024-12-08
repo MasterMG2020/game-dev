@@ -131,7 +131,7 @@ func wall_slide(delta: float) -> void:
 		velocity.y = min(velocity.y, WALL_SLIDE_SPEED)
 		
 		
-func movement(direction: int, delta: float) -> void:
+func movement(direction: float, delta: float) -> void:
 	if direction != 0:
 		# Accelerate towards the target speed
 		var target_velocity = direction * MAX_SPEED
@@ -144,7 +144,11 @@ func movement(direction: int, delta: float) -> void:
 		# Decelerate smoothly to 0 when no input is provided
 		velocity.x = move_toward(velocity.x, 0, DECELERATION * delta)
 		
-func crouch() -> void: # swaps the colitions shape when the player crouches
+func crouch() -> void:
+	if collisionShape == null or collisionShapeCrouched == null:
+		return  # Exit if collision shapes are missing
+
+	# Check for crouch input and if the player is on the floor
 	if Input.is_action_pressed("crouch") and is_on_floor():
 		collisionShape.disabled = true
 		collisionShapeCrouched.disabled = false
