@@ -4,34 +4,48 @@ extends CharacterBody2D
 @onready var collisionShape = $CollisionShape2D
 @onready var collisionShapeCrouched = $CollisionShape2D_crouched
 
-# Basic movement parameters
-const MAX_SPEED: float = 170.0        # Top speed
-const ACCELERATION: float = 700.0   # Acceleration rate
-const DECELERATION: float = 1700.0   # Deceleration rate
+# -- BASIC MOVEMENT PARAMETERS --
+const MAX_SPEED: float = 170.0
+const ACCELERATION: float = 700.0
+const DECELERATION: float = 1700.0
 
-# Advanced movement parameters
+# -- ADVANCED MOVEMENT PARAMETERS --
 const JUMP_VELOCITY: float = -300.0
-const JUMP_AMOUNT: int = 2 # number of jumps the player has
-const DASH_SPEED: float = 400.0 # Dash velocity
-const DASH_TIME: float = 0.2 # Duration of the dash
-const MAX_SPEED_CROUCHED: float = 80.0 # speed while crouched
+const JUMP_AMOUNT: int = 2
+const DASH_SPEED: float = 400.0
+const DASH_TIME: float = 0.2
+const MAX_SPEED_CROUCHED: float = 80.0
 
-# Wall slide parameters
-const WALL_SLIDE_SPEED: float = 50.0 # Speed of wall slide
+# -- WALL SLIDE PARAMETERS --
+const WALL_SLIDE_SPEED: float = 50.0
 const JUMP_AWAY_FROM_WALL_SPEED: float = 100.0
 
+# -- COMBO VARIABLES --
+var attack_stage: int = 0
+var combo_timer: float = 0.0
+const COMBO_RESET_TIME: float = 1.0
 
-# Global movement  variable declaration
+# If you want the player briefly “locked” at the start of each attack:
+# e.g., 0.15 seconds of no movement for the first/second attacks
+const ATTACK_LOCK_TIME_1: float = 0.15
+const ATTACK_LOCK_TIME_2: float = 0.15
+
+# This tracks how much longer the current attack “locks” movement.
+var attack_lock_time: float = 0.0
+
+# -- MOVEMENT FLAGS --
 var is_dashing: bool = false
 var can_dash: bool = true
 var dash_timer: float = 0.0
 var jump_amount: int = 0
 
+# Signal for dying animation
 signal died
 
 func _ready():
 	# Connect the `died` signal to the `die` function
 	connect("died", _on_died)
+
 
 func _on_died():
 	# Play the death animation
@@ -42,52 +56,128 @@ func _on_died():
 func _physics_process(delta):
 	var gravity: float = ProjectSettings.get_setting("physics/2d/default_gravity")
 	var direction: float = Input.get_axis("move_left", "move_right")
+	
+	# ----- Combo Timer Updates -----
+	if combo_timer > 0.0:
+		combo_timer -= delta
+		if combo_timer <= 0.0:
+			attack_stage = 0
+			attack_lock_time = 0.0
 
-	# Update dash timer
+	# ----- Attack Input -----
+	if Input.is_action_just_pressed("attack"):
+	# If not attacking or we still have time to continue combo...
+		if attack_stage == 0 or combo_timer > 0.0:
+			start_attack()
+
+	# ----- Dash Timer -----
 	if is_dashing:
 		dash_timer -= delta
 		if dash_timer <= 0:
 			is_dashing = false
-			velocity.x = 0  # Stop the dash horizontal movement when it ends
+			velocity.x = 0
 
-	# Check if player has touched ground and update abilities accordingly
+	# ----- Ground Check -----
 	if is_on_floor():
 		jump_amount = JUMP_AMOUNT
 		can_dash = true
 
-	# Handle dash
-	if Input.is_action_just_pressed("dash") and not is_dashing and can_dash:
-		can_dash = false
-		start_dash(direction)
-	
-	wall_slide(delta)
-
-	# Handle jump
-	jump()
-	
-	# Handle crouch collition shape
-	crouch()
-	
-	# Apply movement
-	movement(direction, delta)
-
-	# Flip the sprite
-	if direction > 0:
-		animated_sprite.flip_h = false
-	elif direction < 0:
-		animated_sprite.flip_h = true
-
-	# Play animations
-	play_animations(direction)
-	
-	# Add gravity if not dashing and not on floor
+	# ----- Gravity -----
+	# Even if attacking, we generally still want gravity to apply 
+	# (unless you specifically want an “air stall” while attacking).
 	if not is_on_floor() and not is_dashing:
 		velocity.y += gravity * delta
-	
-	# Move the player
-	move_and_slide()
 
+	# =============================
+	#    ATTACK / MOVEMENT LOGIC
+	# =============================
+	#
+	# If we are in the "attack lock" period, we partially or fully disable movement.
+	# If the player *tries* to move/dash/jump, they lose the combo (punishment).
+	#
+	# After the lock time ends, they can move freely BUT that still cancels the combo
+	# to avoid "walk + keep swinging" with no penalty.
 
+	var is_attempting_movement = (direction != 0 or Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("dash"))
+
+	if attack_stage != 0:
+		# If currently attacking...
+		if attack_lock_time > 0:
+			# We are "locked" for this many seconds. Decrement and block movement.
+			attack_lock_time -= delta
+
+			# But still do move_and_slide() so gravity & collisions work
+			move_and_slide()
+		else:
+			# Attack lock expired -> if we detect new movement input, reset combo
+			if is_attempting_movement:
+				# The user moved or jumped or dashed - cancel combo.
+				attack_stage = 0
+				combo_timer = 0.0
+				# (Optionally play a short "canceled" animation or effect.)
+
+			# Normal movement (no lock, but still in combo):
+			# Because we said "movement will stop the combo", once they 
+			# physically press left/right or dash, the combo is canceled above.
+			# But if they're holding direction from before the attack started, 
+			# you can decide if that also cancels it or not. 
+			# For this example, we'll cancel if direction != 0.
+
+			wall_slide(delta)
+			jump()
+			crouch()
+			movement(direction, delta)
+			if direction > 0:
+				animated_sprite.flip_h = false
+			elif direction < 0:
+				animated_sprite.flip_h = true
+			play_animations(direction)
+
+			move_and_slide()
+	else:
+		# Not attacking at all -> normal movement
+		if Input.is_action_just_pressed("dash") and not is_dashing and can_dash:
+			can_dash = false
+			start_dash(direction)
+
+		wall_slide(delta)
+		jump()
+		crouch()
+		movement(direction, delta)
+
+		if direction > 0:
+			animated_sprite.flip_h = false
+		elif direction < 0:
+			animated_sprite.flip_h = true
+
+		play_animations(direction)
+		move_and_slide()
+
+func start_attack() -> void:
+	# Advance or reset attack_stage
+	if attack_stage == 0:
+		attack_stage = 1
+		animated_sprite.play("attack_1")
+		attack_lock_time = ATTACK_LOCK_TIME_1
+	elif attack_stage == 1:
+		attack_stage = 2
+		animated_sprite.play("attack_2")
+		attack_lock_time = ATTACK_LOCK_TIME_2
+	elif attack_stage == 2:
+		attack_stage = 1  # or 3 if you want to do a third distinct attack
+		animated_sprite.play("attack_1")
+		attack_lock_time = ATTACK_LOCK_TIME_1
+	# Reset the combo timer so the player has time to chain more attacks
+	combo_timer = COMBO_RESET_TIME
+
+func _on_animation_finished() -> void:
+	# If the current animation is an attack AND the combo timer is done,
+	# revert to idle
+	if animated_sprite.animation in ["attack_1", "attack_2"]:
+		# Reset to idle if the combo isn't continued
+		if combo_timer <= 0:
+			attack_stage = 0
+			animated_sprite.play("idle")
 
 func jump() -> void:
 	if is_dashing:
@@ -112,10 +202,11 @@ func start_dash(dash_direction: float) -> void:
 		dash_direction = -1 if animated_sprite.flip_h else 1 
 		
 	velocity.x = DASH_SPEED * dash_direction  # Set constant horizontal dash speed
-
-
-		
+	
+	
 func play_animations(direction: float) -> void:
+	if attack_stage != 0:
+		return
 	if is_dashing:
 		animated_sprite.play("dash")
 		return
