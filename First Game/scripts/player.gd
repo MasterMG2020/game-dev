@@ -27,6 +27,18 @@ var can_dash: bool = true
 var dash_timer: float = 0.0
 var jump_amount: int = 0
 
+signal died
+
+func _ready():
+	# Connect the `died` signal to the `die` function
+	connect("died", _on_died)
+
+func _on_died():
+	# Play the death animation
+	animated_sprite.play("dead")
+	# Disable player input or other logic here if needed
+	set_physics_process(false)  # Disable movement
+
 func _physics_process(delta):
 	var gravity: float = ProjectSettings.get_setting("physics/2d/default_gravity")
 	var direction: float = Input.get_axis("move_left", "move_right")
@@ -98,11 +110,15 @@ func start_dash(dash_direction: float) -> void:
 	if dash_direction == 0:
 		# Default to the direction the sprite is facing if no input
 		dash_direction = -1 if animated_sprite.flip_h else 1 
+		
 	velocity.x = DASH_SPEED * dash_direction  # Set constant horizontal dash speed
 
 
 		
 func play_animations(direction: float) -> void:
+	if is_dashing:
+		animated_sprite.play("dash")
+		return
 	if is_on_floor():
 		if direction == 0:
 			animated_sprite.play("idle")
