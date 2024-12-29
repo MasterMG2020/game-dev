@@ -3,13 +3,12 @@ extends Area2D
 @onready var timer = $Timer
 
 func _on_body_entered(body):
-	print("You died!")
-	Engine.time_scale = 0.5
+	# Check if the body has the `died` signal (is a player)
+	if body.has_signal("died"):
+		print("You died!")
+		# Emit the `died` signal to trigger the player's death animation
+		body.emit_signal("died")
 	
-	# Free all CollisionShape2D nodes in the body
-	for child in body.get_children():
-		if child is CollisionShape2D:
-			child.queue_free()
 	
 	timer.start()
 
