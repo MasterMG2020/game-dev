@@ -5,12 +5,12 @@ extends CharacterBody2D
 @onready var collisionShapeCrouched = $CollisionShape2D_crouched
 
 # Basic movement parameters
-const MAX_SPEED: float = 170.0        # Top speed
+const MAX_SPEED: float = 450.0        # Top speed
 const ACCELERATION: float = 700.0   # Acceleration rate
 const DECELERATION: float = 1700.0   # Deceleration rate
 
 # Advanced movement parameters
-const JUMP_VELOCITY: float = -300.0
+const JUMP_VELOCITY: float = -500.0
 const JUMP_AMOUNT: int = 2 # number of jumps the player has
 const DASH_SPEED: float = 400.0 # Dash velocity
 const DASH_TIME: float = 0.2 # Duration of the dash

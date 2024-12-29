@@ -353,12 +353,12 @@ animations = [{
 }]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_ulhfw"]
-radius = 6.0
-height = 24.0
+radius = 22.0
+height = 118.0
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_3ihyw"]
-radius = 5.0
-height = 14.0
+radius = 26.0
+height = 86.0
 
 [node name="Player" type="CharacterBody2D"]
 z_index = 5
@@ -366,19 +366,19 @@ collision_layer = 2
 script = ExtResource("1_ofpvf")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
-position = Vector2(-33, -64)
+position = Vector2(-106, -226)
+scale = Vector2(3.5, 3.5)
 sprite_frames = SubResource("SpriteFrames_81gkq")
-animation = &"dead"
+animation = &"jump"
 autoplay = "idle"
-frame_progress = 0.422732
 centered = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(1, -17)
+position = Vector2(-9, -60)
 shape = SubResource("CapsuleShape2D_ulhfw")
 
 [node name="CollisionShape2D_crouched" type="CollisionShape2D" parent="."]
-position = Vector2(0, -6)
+position = Vector2(-9, -27)
 rotation = 1.5708
 shape = SubResource("CapsuleShape2D_3ihyw")
 disabled = true
