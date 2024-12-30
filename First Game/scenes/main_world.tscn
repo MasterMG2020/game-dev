@@ -1,9 +1,17 @@
+
 [gd_scene load_steps=9 format=3 uid="uid://lqaa1mt0e62l"]
+
+[gd_scene load_steps=7 format=3 uid="uid://87xkdlshjrj7"]
+
 
 [ext_resource type="Texture2D" uid="uid://ramcikufoedu" path="res://assets/sprites/Tilemap black 64pix.png" id="1_88nab"]
 [ext_resource type="Texture2D" uid="uid://1ug8m1ywr1de" path="res://assets/sprites/Legacy FantasyAssets/Legacy Fantay - Lost Glades/Assets/Tiles.png" id="2_fophh"]
 [ext_resource type="PackedScene" uid="uid://dqnaqj8yb6hwd" path="res://scenes/player.tscn" id="2_l1qw8"]
+
 [ext_resource type="PackedScene" uid="uid://jdaylofij677" path="res://scenes/platform1.tscn" id="4_24mvm"]
+
+[ext_resource type="PackedScene" uid="uid://d2w2i5h0lhc6l" path="res://scenes/slime.tscn" id="3_5bc4o"]
+
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_iag23"]
 
@@ -8165,6 +8173,7 @@ position = Vector2(-530, -63)
 [node name="Camera2D" type="Camera2D" parent="Player"]
 position = Vector2(2, -119)
 
+
 [node name="Platform" parent="." instance=ExtResource("4_24mvm")]
 position = Vector2(2774, 1047)
 
@@ -8179,3 +8188,7 @@ position = Vector2(-503, 791)
 
 [node name="platform1_2" parent="." instance=ExtResource("4_24mvm")]
 position = Vector2(-682, 672)
+
+[node name="Slime" parent="." instance=ExtResource("3_5bc4o")]
+position = Vector2(-257, 792)
+
