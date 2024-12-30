@@ -1,4 +1,4 @@
-[gd_scene load_steps=55 format=3 uid="uid://dqnaqj8yb6hwd"]
+[gd_scene load_steps=56 format=3 uid="uid://dqnaqj8yb6hwd"]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_ofpvf"]
 [ext_resource type="Texture2D" uid="uid://bccdn66e2scp3" path="res://assets/sprites/Legacy FantasyAssets/Legacy-Fantasy - High Forest 2.0 (1)/Legacy-Fantasy - High Forest 2.3/Character/Jumlp-All/Jump-All-Sheet.png" id="2_3yrnn"]
@@ -207,7 +207,7 @@ animations = [{
 }],
 "loop": false,
 "name": &"attack_1",
-"speed": 7.0
+"speed": 9.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -227,7 +227,7 @@ animations = [{
 }],
 "loop": false,
 "name": &"attack_2",
-"speed": 7.0
+"speed": 9.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -379,20 +379,19 @@ height = 118.0
 radius = 26.0
 height = 86.0
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_d5n18"]
+size = Vector2(202.5, 145)
+
 [node name="Player" type="CharacterBody2D"]
 z_index = 5
 collision_layer = 2
 script = ExtResource("1_ofpvf")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
-position = Vector2(-106, -226)
+position = Vector2(-120, -225)
 scale = Vector2(3.5, 3.5)
 sprite_frames = SubResource("SpriteFrames_81gkq")
-
 animation = &"attack_2"
-
-animation = &"jump"
-
 autoplay = "idle"
 centered = false
 
@@ -405,3 +404,13 @@ position = Vector2(-9, -27)
 rotation = 1.5708
 shape = SubResource("CapsuleShape2D_3ihyw")
 disabled = true
+
+[node name="AttackArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
+position = Vector2(101, -73)
+shape = SubResource("RectangleShape2D_d5n18")
+disabled = true
+
+[connection signal="animation_changed" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_changed"]
+[connection signal="frame_changed" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_frame_changed"]

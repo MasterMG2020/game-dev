@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://lqaa1mt0e62l"]
+[gd_scene load_steps=7 format=3 uid="uid://87xkdlshjrj7"]
 
 [ext_resource type="Texture2D" uid="uid://ramcikufoedu" path="res://assets/sprites/Tilemap black 64pix.png" id="1_88nab"]
 [ext_resource type="PackedScene" uid="uid://dqnaqj8yb6hwd" path="res://scenes/player.tscn" id="2_l1qw8"]
+[ext_resource type="PackedScene" uid="uid://d2w2i5h0lhc6l" path="res://scenes/slime.tscn" id="3_5bc4o"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_iag23"]
 
@@ -7602,3 +7603,6 @@ position = Vector2(-530, -63)
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
 position = Vector2(2, -119)
+
+[node name="Slime" parent="." instance=ExtResource("3_5bc4o")]
+position = Vector2(-257, 792)

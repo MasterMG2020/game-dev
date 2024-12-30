@@ -5,33 +5,21 @@ extends CharacterBody2D
 @onready var collisionShapeCrouched = $CollisionShape2D_crouched
 
 
-# -- BASIC MOVEMENT PARAMETERS --
-const MAX_SPEED: float = 170.0
-const ACCELERATION: float = 700.0
-const DECELERATION: float = 1700.0
-
-# -- ADVANCED MOVEMENT PARAMETERS --
-const JUMP_VELOCITY: float = -300.0
-const JUMP_AMOUNT: int = 2
-const DASH_SPEED: float = 400.0
-const DASH_TIME: float = 0.2
-const MAX_SPEED_CROUCHED: float = 80.0
-
 # Basic movement parameters
-const MAX_SPEED: float = 450.0        # Top speed
-const ACCELERATION: float = 700.0   # Acceleration rate
-const DECELERATION: float = 1700.0   # Deceleration rate
+const MAX_SPEED: float = 900.0        # Top speed
+const ACCELERATION: float = 4000.0   # Acceleration rate
+const DECELERATION: float = 6000.0   # Deceleration rate
 
 # Advanced movement parameters
-const JUMP_VELOCITY: float = -500.0
+const JUMP_VELOCITY: float = -1000.0
 const JUMP_AMOUNT: int = 2 # number of jumps the player has
-const DASH_SPEED: float = 400.0 # Dash velocity
-const DASH_TIME: float = 0.2 # Duration of the dash
-const MAX_SPEED_CROUCHED: float = 80.0 # speed while crouched
+const DASH_SPEED: float = 2000.0 # Dash velocity
+const DASH_TIME: float = 0.4 # Duration of the dash
+const MAX_SPEED_CROUCHED: float = 160.0 # speed while crouched
 
 # -- WALL SLIDE PARAMETERS --
-const WALL_SLIDE_SPEED: float = 50.0
-const JUMP_AWAY_FROM_WALL_SPEED: float = 100.0
+const WALL_SLIDE_SPEED: float = 300.0
+const JUMP_AWAY_FROM_WALL_SPEED: float = 200.0
 
 # -- COMBO VARIABLES --
 var attack_stage: int = 0
@@ -58,6 +46,7 @@ signal died
 func _ready():
 	# Connect the `died` signal to the `die` function
 	connect("died", _on_died)
+	$AttackArea.body_entered.connect(_on_AttackArea_body_entered)
 
 
 func _on_died():
@@ -142,8 +131,10 @@ func _physics_process(delta):
 			movement(direction, delta)
 			if direction > 0:
 				animated_sprite.flip_h = false
+				$AttackArea.position.x = 100  # Place the hitbox to the right side
 			elif direction < 0:
 				animated_sprite.flip_h = true
+				$AttackArea.position.x = -100  # Place the hitbox to the right side
 			play_animations(direction)
 
 			move_and_slide()
@@ -160,8 +151,10 @@ func _physics_process(delta):
 
 		if direction > 0:
 			animated_sprite.flip_h = false
+			$AttackArea.position.x = 100
 		elif direction < 0:
 			animated_sprite.flip_h = true
+			$AttackArea.position.x = -100
 
 		play_animations(direction)
 		move_and_slide()
@@ -191,6 +184,29 @@ func _on_animation_finished() -> void:
 		if combo_timer <= 0:
 			attack_stage = 0
 			animated_sprite.play("idle")
+			
+func _enable_hitbox():
+	$AttackArea/CollisionShape2D.disabled = false
+
+func _disable_hitbox():
+	$AttackArea/CollisionShape2D.disabled = true
+
+func _on_animated_sprite_2d_frame_changed() -> void:
+	# If we are in an attack animation...
+	if animated_sprite.animation == "attack_1" and animated_sprite.frame > 2:
+		# If frame == 2 means the 3rd frame (0-based indexing)
+		_enable_hitbox()
+	elif animated_sprite.animation == "attack_2" and animated_sprite.frame > 2:
+		_enable_hitbox()
+	else:
+		# You might disable it on any other frame,
+		# or wait until the animation finishes. Up to you:
+		_disable_hitbox()
+
+func _on_AttackArea_body_entered(body):
+	if body.has_method("take_damage"):
+		body.take_damage(10)  # or however much damage
+
 
 func jump() -> void:
 	if is_dashing:
