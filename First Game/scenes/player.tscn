@@ -1,4 +1,8 @@
+level
+[gd_scene load_steps=55 format=3 uid="uid://dqnaqj8yb6hwd"]
+
 [gd_scene load_steps=56 format=3 uid="uid://dqnaqj8yb6hwd"]
+main
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_ofpvf"]
 [ext_resource type="Texture2D" uid="uid://bccdn66e2scp3" path="res://assets/sprites/Legacy FantasyAssets/Legacy-Fantasy - High Forest 2.0 (1)/Legacy-Fantasy - High Forest 2.3/Character/Jumlp-All/Jump-All-Sheet.png" id="2_3yrnn"]
@@ -207,7 +211,10 @@ animations = [{
 }],
 "loop": false,
 "name": &"attack_1",
+level
+"speed": 7.0
 "speed": 9.0
+main
 }, {
 "frames": [{
 "duration": 1.0,
@@ -227,7 +234,11 @@ animations = [{
 }],
 "loop": false,
 "name": &"attack_2",
+level
+"speed": 7.0
+
 "speed": 9.0
+main
 }, {
 "frames": [{
 "duration": 1.0,

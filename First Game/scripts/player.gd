@@ -4,7 +4,9 @@ extends CharacterBody2D
 @onready var collisionShape = $CollisionShape2D
 @onready var collisionShapeCrouched = $CollisionShape2D_crouched
 
+level
 
+main
 # Basic movement parameters
 const MAX_SPEED: float = 900.0        # Top speed
 const ACCELERATION: float = 4000.0   # Acceleration rate
@@ -26,11 +28,28 @@ var attack_stage: int = 0
 var combo_timer: float = 0.0
 const COMBO_RESET_TIME: float = 1.0
 
+level
+# -- WALL SLIDE PARAMETERS --
+const WALL_SLIDE_SPEED: float = 50.0
+const JUMP_AWAY_FROM_WALL_SPEED: float = 100.0
+
+# -- COMBO VARIABLES --
+var attack_stage: int = 0
+var combo_timer: float = 0.0
+const COMBO_RESET_TIME: float = 1.0
+
 # If you want the player briefly “locked” at the start of each attack:
 # e.g., 0.15 seconds of no movement for the first/second attacks
 const ATTACK_LOCK_TIME_1: float = 0.15
 const ATTACK_LOCK_TIME_2: float = 0.15
 
+
+# If you want the player briefly “locked” at the start of each attack:
+# e.g., 0.15 seconds of no movement for the first/second attacks
+const ATTACK_LOCK_TIME_1: float = 0.15
+const ATTACK_LOCK_TIME_2: float = 0.15
+
+main
 # This tracks how much longer the current attack “locks” movement.
 var attack_lock_time: float = 0.0
 
@@ -47,6 +66,7 @@ func _ready():
 	# Connect the `died` signal to the `die` function
 	connect("died", _on_died)
 	$AttackArea.body_entered.connect(_on_AttackArea_body_entered)
+
 
 
 func _on_died():
@@ -131,6 +151,9 @@ func _physics_process(delta):
 			movement(direction, delta)
 			if direction > 0:
 				animated_sprite.flip_h = false
+
+			elif direction < 0:
+				animated_sprite.flip_h = true
 				$AttackArea.position.x = 100  # Place the hitbox to the right side
 			elif direction < 0:
 				animated_sprite.flip_h = true
@@ -151,6 +174,11 @@ func _physics_process(delta):
 
 		if direction > 0:
 			animated_sprite.flip_h = false
+		elif direction < 0:
+			animated_sprite.flip_h = true
+
+		play_animations(direction)
+		move_and_slide()
 			$AttackArea.position.x = 100
 		elif direction < 0:
 			animated_sprite.flip_h = true
@@ -207,6 +235,31 @@ func _on_AttackArea_body_entered(body):
 	if body.has_method("take_damage"):
 		body.take_damage(10)  # or however much damage
 
+func start_attack() -> void:
+	# Advance or reset attack_stage
+	if attack_stage == 0:
+		attack_stage = 1
+		animated_sprite.play("attack_1")
+		attack_lock_time = ATTACK_LOCK_TIME_1
+	elif attack_stage == 1:
+		attack_stage = 2
+		animated_sprite.play("attack_2")
+		attack_lock_time = ATTACK_LOCK_TIME_2
+	elif attack_stage == 2:
+		attack_stage = 1  # or 3 if you want to do a third distinct attack
+		animated_sprite.play("attack_1")
+		attack_lock_time = ATTACK_LOCK_TIME_1
+	# Reset the combo timer so the player has time to chain more attacks
+	combo_timer = COMBO_RESET_TIME
+
+func _on_animation_finished() -> void:
+	# If the current animation is an attack AND the combo timer is done,
+	# revert to idle
+	if animated_sprite.animation in ["attack_1", "attack_2"]:
+		# Reset to idle if the combo isn't continued
+		if combo_timer <= 0:
+			attack_stage = 0
+			animated_sprite.play("idle")
 
 func jump() -> void:
 	if is_dashing:
