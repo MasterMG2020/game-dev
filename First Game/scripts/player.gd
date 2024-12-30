@@ -13,8 +13,8 @@ const DECELERATION: float = 6000.0   # Deceleration rate
 # Advanced movement parameters
 const JUMP_VELOCITY: float = -1000.0
 const JUMP_AMOUNT: int = 2 # number of jumps the player has
-const DASH_SPEED: float = 2000.0 # Dash velocity
-const DASH_TIME: float = 0.4 # Duration of the dash
+const DASH_SPEED: float = 2500.0 # Dash velocity
+const DASH_TIME: float = 0.3 # Duration of the dash
 const MAX_SPEED_CROUCHED: float = 160.0 # speed while crouched
 
 # -- WALL SLIDE PARAMETERS --
@@ -42,6 +42,13 @@ var jump_amount: int = 0
 
 # Signal for dying animation
 signal died
+
+# ------------------------------------------------
+# NEW: Track if we were on the floor last frame,
+# so we can detect the exact moment of landing.
+# ------------------------------------------------
+var was_on_floor: bool = false
+var is_landing: bool = false
 
 func _ready():
 	# Connect the `died` signal to the `die` function
@@ -158,6 +165,11 @@ func _physics_process(delta):
 
 		play_animations(direction)
 		move_and_slide()
+		
+	# ------------------------------------------------
+	# Update `was_on_floor` after movement is done.
+	# ------------------------------------------------
+	was_on_floor = is_on_floor()
 
 func start_attack() -> void:
 	# Advance or reset attack_stage
@@ -183,6 +195,15 @@ func _on_animation_finished() -> void:
 		# Reset to idle if the combo isn't continued
 		if combo_timer <= 0:
 			attack_stage = 0
+			animated_sprite.play("idle")
+			
+	# If the current animation is "landing", we can switch to idle or run next
+	if animated_sprite.animation == "landing":
+		is_landing = false
+		# Check horizontal velocity to decide if we go to "idle" or "run"
+		if abs(velocity.x) > 10:
+			animated_sprite.play("run")
+		else:
 			animated_sprite.play("idle")
 			
 func _enable_hitbox():
@@ -239,16 +260,32 @@ func play_animations(direction: float) -> void:
 	if is_dashing:
 		animated_sprite.play("dash")
 		return
-	if is_on_floor():
-		if direction == 0:
-			animated_sprite.play("idle")
-		else:
-			animated_sprite.play("run")
-	else:
-		animated_sprite.play("jump")
 		
-	if Input.is_action_pressed("crouch") and is_on_floor():
+	# If we are already flagged as "landing," do not override it:
+	if is_landing:
+		return
+	# Check if we're in the air
+	if not is_on_floor():
+		# Going UP
+		if velocity.y < 0:
+			animated_sprite.play("jump")  # Your new "Jump" anim
+		else:
+			animated_sprite.play("falling")  # Your new "Falling" anim
+		return
+	else:
+	# On the floor now
+	# If we were not on the floor last frame, that means we just landed:
+		if not was_on_floor:
+			animated_sprite.play("landing")  # Your new "Landing" anim
+			is_landing = true
+			return
+	# Otherwise, normal ground animations:
+		if Input.is_action_pressed("crouch"):
 			animated_sprite.play("crouch")
+		elif abs(direction) > 0:
+			animated_sprite.play("run")
+		else:
+			animated_sprite.play("idle")
 		
 		
 func wall_slide(delta: float) -> void:
