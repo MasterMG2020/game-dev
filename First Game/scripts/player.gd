@@ -3,176 +3,199 @@ extends CharacterBody2D
 @onready var animated_sprite = $AnimatedSprite2D
 @onready var collisionShape = $CollisionShape2D
 @onready var collisionShapeCrouched = $CollisionShape2D_crouched
-
+@onready var attack_area = $AttackArea
 
 # Basic movement parameters
-const MAX_SPEED: float = 900.0        # Top speed
-const ACCELERATION: float = 4000.0   # Acceleration rate
-const DECELERATION: float = 6000.0   # Deceleration rate
+const MAX_SPEED: float = 900.0
+const ACCELERATION: float = 4000.0
+const DECELERATION: float = 6000.0
 
-# Advanced movement parameters
-const JUMP_VELOCITY: float = -1000.0
-const JUMP_AMOUNT: int = 2 # number of jumps the player has
-const DASH_SPEED: float = 2500.0 # Dash velocity
-const DASH_TIME: float = 0.3 # Duration of the dash
-const MAX_SPEED_CROUCHED: float = 160.0 # speed while crouched
+# Jump / Double Jump
+const JUMP_AMOUNT: int = 2             # total normal jumps (single + double)
+const JUMP_FORCE: float = 1000.0       # first jump force
+const DOUBLE_JUMP_FORCE: float = 900.0 # second jump is often slightly lower
 
-# -- WALL SLIDE PARAMETERS --
+# This factor shortens the jump if player releases "jump" early while moving upwards
+const SHORT_HOP_FACTOR: float = 0.5
+
+# ---- NEW: For variable (long) jump ----
+const EXTRA_JUMP_HOLD_TIME: float = 0.2   # how many seconds we keep boosting if button is held
+const EXTRA_JUMP_FORCE: float = 25.0      # how strongly we boost per frame while jump is held
+
+# Wall Slide / Wall Jump
 const WALL_SLIDE_SPEED: float = 300.0
-const JUMP_AWAY_FROM_WALL_SPEED: float = 200.0
+const JUMP_AWAY_FROM_WALL_SPEED: float = 1000.0
 
-# -- COMBO VARIABLES --
+# ---- NEW: Additional offset when wall jumping ----
+const WALL_JUMP_OFFSET: float = 20.0  # how far to nudge the player’s position away from the wall
+
+# Dash
+const DASH_SPEED: float = 2500.0
+const DASH_TIME: float = 0.3
+
+# Crouch
+const MAX_SPEED_CROUCHED: float = 160.0
+
+# Combo system
 var attack_stage: int = 0
 var combo_timer: float = 0.0
 const COMBO_RESET_TIME: float = 1.0
 
-# If you want the player briefly “locked” at the start of each attack:
-# e.g., 0.15 seconds of no movement for the first/second attacks
+# Attack lock times
 const ATTACK_LOCK_TIME_1: float = 0.15
 const ATTACK_LOCK_TIME_2: float = 0.15
-
-# This tracks how much longer the current attack “locks” movement.
 var attack_lock_time: float = 0.0
 
-# -- MOVEMENT FLAGS --
+# Movement flags
 var is_dashing: bool = false
 var can_dash: bool = true
 var dash_timer: float = 0.0
+
+# Jump count for normal/double jump
 var jump_amount: int = 0
 
-# Signal for dying animation
-signal died
-
-# ------------------------------------------------
-# NEW: Track if we were on the floor last frame,
-# so we can detect the exact moment of landing.
-# ------------------------------------------------
+# Used to detect landing
 var was_on_floor: bool = false
 var is_landing: bool = false
 
-func _ready():
-	# Connect the `died` signal to the `die` function
-	connect("died", _on_died)
-	$AttackArea.body_entered.connect(_on_AttackArea_body_entered)
+# ---- NEW: Track how long jump is being held for variable jump. ----
+var _is_jumping: bool = false
+var _jump_hold_time: float = 0.0
 
+signal died
+
+func _ready():
+	connect("died", _on_died)
+	attack_area.body_entered.connect(_on_AttackArea_body_entered)
 
 func _on_died():
-	# Play the death animation
 	animated_sprite.play("dead")
-	# Disable player input or other logic here if needed
-	set_physics_process(false)  # Disable movement
+	set_physics_process(false)
 
 func _physics_process(delta):
 	var gravity: float = ProjectSettings.get_setting("physics/2d/default_gravity")
 	var direction: float = Input.get_axis("move_left", "move_right")
-	
-	# ----- Combo Timer Updates -----
+
+	# -------------------------------------------------
+	#  COMBO TIMER
+	# -------------------------------------------------
 	if combo_timer > 0.0:
 		combo_timer -= delta
 		if combo_timer <= 0.0:
 			attack_stage = 0
 			attack_lock_time = 0.0
 
-	# ----- Attack Input -----
 	if Input.is_action_just_pressed("attack"):
-	# If not attacking or we still have time to continue combo...
 		if attack_stage == 0 or combo_timer > 0.0:
 			start_attack()
 
-	# ----- Dash Timer -----
+	# -------------------------------------------------
+	#  DASH TIMER
+	# -------------------------------------------------
 	if is_dashing:
 		dash_timer -= delta
 		if dash_timer <= 0:
 			is_dashing = false
 			velocity.x = 0
 
-	# ----- Ground Check -----
+	# -------------------------------------------------
+	#  GROUND CHECK
+	# -------------------------------------------------
 	if is_on_floor():
 		jump_amount = JUMP_AMOUNT
 		can_dash = true
+		_is_jumping = false
+		_jump_hold_time = 0.0
 
-	# ----- Gravity -----
-	# Even if attacking, we generally still want gravity to apply 
-	# (unless you specifically want an “air stall” while attacking).
+	# -------------------------------------------------
+	#  GRAVITY
+	# -------------------------------------------------
 	if not is_on_floor() and not is_dashing:
 		velocity.y += gravity * delta
 
-	# =============================
-	#    ATTACK / MOVEMENT LOGIC
-	# =============================
-	#
-	# If we are in the "attack lock" period, we partially or fully disable movement.
-	# If the player *tries* to move/dash/jump, they lose the combo (punishment).
-	#
-	# After the lock time ends, they can move freely BUT that still cancels the combo
-	# to avoid "walk + keep swinging" with no penalty.
+	# -------------------------------------------------
+	#  SHORT-HOP LOGIC
+	# -------------------------------------------------
+	if Input.is_action_just_released("jump") and velocity.y < 0:
+		# Player released jump early => short hop
+		velocity.y *= SHORT_HOP_FACTOR
+		_is_jumping = false
 
-	var is_attempting_movement = (direction != 0 or Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("dash"))
+	# -------------------------------------------------
+	#  LONG-JUMP (VARIABLE JUMP) LOGIC
+	# -------------------------------------------------
+	if _is_jumping and Input.is_action_pressed("jump") and velocity.y < 0:
+		_jump_hold_time += delta
+		if _jump_hold_time < EXTRA_JUMP_HOLD_TIME:
+			# Keep boosting upward
+			velocity.y -= EXTRA_JUMP_FORCE
+	else:
+		_is_jumping = false
+
+	# -------------------------------------------------
+	#  ATTACK LOCK vs. MOVEMENT
+	# -------------------------------------------------
+	var is_attempting_movement = (
+		direction != 0 or
+		Input.is_action_just_pressed("jump") or
+		Input.is_action_just_pressed("dash")
+	)
 
 	if attack_stage != 0:
-		# If currently attacking...
 		if attack_lock_time > 0:
-			# We are "locked" for this many seconds. Decrement and block movement.
 			attack_lock_time -= delta
-
-			# But still do move_and_slide() so gravity & collisions work
 			move_and_slide()
 		else:
-			# Attack lock expired -> if we detect new movement input, reset combo
 			if is_attempting_movement:
-				# The user moved or jumped or dashed - cancel combo.
 				attack_stage = 0
 				combo_timer = 0.0
-				# (Optionally play a short "canceled" animation or effect.)
-
-			# Normal movement (no lock, but still in combo):
-			# Because we said "movement will stop the combo", once they 
-			# physically press left/right or dash, the combo is canceled above.
-			# But if they're holding direction from before the attack started, 
-			# you can decide if that also cancels it or not. 
-			# For this example, we'll cancel if direction != 0.
 
 			wall_slide(delta)
-			jump()
+			jump(delta)
 			crouch()
 			movement(direction, delta)
+
+			# Flip sprite
 			if direction > 0:
 				animated_sprite.flip_h = false
-				$AttackArea.position.x = 100  # Place the hitbox to the right side
+				attack_area.position.x = 100
 			elif direction < 0:
 				animated_sprite.flip_h = true
-				$AttackArea.position.x = -100  # Place the hitbox to the right side
-			play_animations(direction)
+				attack_area.position.x = -100
 
+			play_animations(direction)
 			move_and_slide()
 	else:
-		# Not attacking at all -> normal movement
+		# Not currently attacking
 		if Input.is_action_just_pressed("dash") and not is_dashing and can_dash:
 			can_dash = false
 			start_dash(direction)
 
 		wall_slide(delta)
-		jump()
+		jump(delta)
 		crouch()
 		movement(direction, delta)
 
+		# Flip sprite
 		if direction > 0:
 			animated_sprite.flip_h = false
-			$AttackArea.position.x = 100
+			attack_area.position.x = 100
 		elif direction < 0:
 			animated_sprite.flip_h = true
-			$AttackArea.position.x = -100
+			attack_area.position.x = -100
 
 		play_animations(direction)
 		move_and_slide()
-		
-	# ------------------------------------------------
-	# Update `was_on_floor` after movement is done.
-	# ------------------------------------------------
+
+	# -------------------------------------------------
+	#  Update was_on_floor
+	# -------------------------------------------------
 	was_on_floor = is_on_floor()
 
+# -------------------------------------------------
+#  ATTACK / COMBO
+# -------------------------------------------------
 func start_attack() -> void:
-	# Advance or reset attack_stage
 	if attack_stage == 0:
 		attack_stage = 1
 		animated_sprite.play("attack_1")
@@ -182,30 +205,27 @@ func start_attack() -> void:
 		animated_sprite.play("attack_2")
 		attack_lock_time = ATTACK_LOCK_TIME_2
 	elif attack_stage == 2:
-		attack_stage = 1  # or 3 if you want to do a third distinct attack
+		attack_stage = 1
 		animated_sprite.play("attack_1")
 		attack_lock_time = ATTACK_LOCK_TIME_1
-	# Reset the combo timer so the player has time to chain more attacks
 	combo_timer = COMBO_RESET_TIME
 
 func _on_animation_finished() -> void:
-	# If the current animation is an attack AND the combo timer is done,
-	# revert to idle
 	if animated_sprite.animation in ["attack_1", "attack_2"]:
-		# Reset to idle if the combo isn't continued
 		if combo_timer <= 0:
 			attack_stage = 0
 			animated_sprite.play("idle")
-			
-	# If the current animation is "landing", we can switch to idle or run next
+
 	if animated_sprite.animation == "landing":
 		is_landing = false
-		# Check horizontal velocity to decide if we go to "idle" or "run"
 		if abs(velocity.x) > 10:
 			animated_sprite.play("run")
 		else:
 			animated_sprite.play("idle")
-			
+
+# -------------------------------------------------
+#  HITBOX ENABLE/DISABLE
+# -------------------------------------------------
 func _enable_hitbox():
 	$AttackArea/CollisionShape2D.disabled = false
 
@@ -213,115 +233,135 @@ func _disable_hitbox():
 	$AttackArea/CollisionShape2D.disabled = true
 
 func _on_animated_sprite_2d_frame_changed() -> void:
-	# If we are in an attack animation...
 	if animated_sprite.animation == "attack_1" and animated_sprite.frame > 2:
-		# If frame == 2 means the 3rd frame (0-based indexing)
 		_enable_hitbox()
 	elif animated_sprite.animation == "attack_2" and animated_sprite.frame > 2:
 		_enable_hitbox()
 	else:
-		# You might disable it on any other frame,
-		# or wait until the animation finishes. Up to you:
 		_disable_hitbox()
 
 func _on_AttackArea_body_entered(body):
 	if body.has_method("take_damage"):
-		body.take_damage(10)  # or however much damage
+		body.take_damage(10)
 
-
-func jump() -> void:
+# -------------------------------------------------
+#  JUMP (with UNLIMITED WALL JUMPS)
+# -------------------------------------------------
+func jump(delta: float) -> void:
 	if is_dashing:
 		return
-	if Input.is_action_just_pressed("jump"):
-		if jump_amount > 0:
-			velocity.y = JUMP_VELOCITY
-			jump_amount -= 1
-		if is_on_wall() and Input.is_action_pressed("move_left"):
-			velocity.y = JUMP_VELOCITY
-			velocity.x = JUMP_AWAY_FROM_WALL_SPEED
-		if is_on_wall() and Input.is_action_pressed("move_right"):
-			velocity.y = JUMP_VELOCITY
-			velocity.x = -JUMP_AWAY_FROM_WALL_SPEED
 
+	if Input.is_action_just_pressed("jump"):
+		# 1) If we are on a wall and NOT on the floor => infinite wall jumps
+		if is_on_wall() and not is_on_floor():
+			velocity.y = -JUMP_FORCE
+			# Increase horizontal push
+			if Input.is_action_pressed("move_left"):
+				velocity.x = JUMP_AWAY_FROM_WALL_SPEED
+				# Nudge the position to the right so we don't "stick"
+				position.x += WALL_JUMP_OFFSET
+			elif Input.is_action_pressed("move_right"):
+				velocity.x = -JUMP_AWAY_FROM_WALL_SPEED
+				# Nudge position to the left
+				position.x -= WALL_JUMP_OFFSET
+			else:
+				# If we're on a wall but no left/right input,
+				# check the wall's normal to decide which way to push
+				var collision = get_slide_collision(0)
+				if collision:
+					velocity.x = -collision.normal.x * JUMP_AWAY_FROM_WALL_SPEED
+					position.x -= collision.normal.x * WALL_JUMP_OFFSET
+
+			_is_jumping = true
+			_jump_hold_time = 0.0
+
+		# 2) Otherwise do a normal jump (or double jump) if we have jumps left
+		elif jump_amount > 0:
+			if jump_amount == JUMP_AMOUNT:
+				# First jump
+				velocity.y = -JUMP_FORCE
+			else:
+				# Second jump
+				velocity.y = -DOUBLE_JUMP_FORCE
+
+			jump_amount -= 1
+			_is_jumping = true
+			_jump_hold_time = 0.0
+
+# -------------------------------------------------
+#  DASH
+# -------------------------------------------------
 func start_dash(dash_direction: float) -> void:
 	is_dashing = true
-	dash_timer = DASH_TIME  # Reset the dash timer
-	velocity.y = 0  # Neutralize vertical velocity to ignore gravity
+	dash_timer = DASH_TIME
+	velocity.y = 0
+
 	if dash_direction == 0:
-		# Default to the direction the sprite is facing if no input
-		dash_direction = -1 if animated_sprite.flip_h else 1 
-		
-	velocity.x = DASH_SPEED * dash_direction  # Set constant horizontal dash speed
-	
-	
+		# Default dash direction = facing direction
+		dash_direction = -1 if animated_sprite.flip_h else 1
+
+	velocity.x = DASH_SPEED * dash_direction
+
+# -------------------------------------------------
+#  ANIMATIONS
+# -------------------------------------------------
 func play_animations(direction: float) -> void:
 	if attack_stage != 0:
 		return
 	if is_dashing:
 		animated_sprite.play("dash")
 		return
-		
-	# If we are already flagged as "landing," do not override it:
 	if is_landing:
 		return
-	# Check if we're in the air
+
 	if not is_on_floor():
-		# Going UP
 		if velocity.y < 0:
-			animated_sprite.play("jump")  # Your new "Jump" anim
+			if animated_sprite.animation != "jump":
+				animated_sprite.play("jump")
 		else:
-			animated_sprite.play("falling")  # Your new "Falling" anim
-		return
+			animated_sprite.play("falling")
 	else:
-	# On the floor now
-	# If we were not on the floor last frame, that means we just landed:
 		if not was_on_floor:
-			animated_sprite.play("landing")  # Your new "Landing" anim
+			animated_sprite.play("landing")
 			is_landing = true
 			return
-	# Otherwise, normal ground animations:
 		if Input.is_action_pressed("crouch"):
 			animated_sprite.play("crouch")
 		elif abs(direction) > 0:
 			animated_sprite.play("run")
 		else:
 			animated_sprite.play("idle")
-		
-		
+
+# -------------------------------------------------
+#  WALL SLIDE
+# -------------------------------------------------
 func wall_slide(delta: float) -> void:
-	var is_wall_sliding: bool = false
-	
+	var is_wall_sliding = false
 	if is_on_wall() and not is_on_floor():
 		if Input.is_action_pressed("move_left") or Input.is_action_pressed("move_right"):
 			is_wall_sliding = true
-		else: 
-			is_wall_sliding = false
-	else:
-		is_wall_sliding = false
-		
+
 	if is_wall_sliding:
-		velocity.y += WALL_SLIDE_SPEED * delta
-		velocity.y = min(velocity.y, WALL_SLIDE_SPEED)
-		
-		
+		velocity.y = min(velocity.y + WALL_SLIDE_SPEED * delta, WALL_SLIDE_SPEED)
+
+# -------------------------------------------------
+#  LEFT/RIGHT MOVEMENT
+# -------------------------------------------------
 func movement(direction: float, delta: float) -> void:
 	if direction != 0:
-		# Accelerate towards the target speed
 		var target_velocity = direction * MAX_SPEED
-		
-		if Input.is_action_pressed("crouch") and is_on_floor(): # slow player down when crouched
+		if Input.is_action_pressed("crouch") and is_on_floor():
 			target_velocity = direction * MAX_SPEED_CROUCHED
-			
 		velocity.x = move_toward(velocity.x, target_velocity, ACCELERATION * delta)
 	else:
-		# Decelerate smoothly to 0 when no input is provided
 		velocity.x = move_toward(velocity.x, 0, DECELERATION * delta)
-		
+
+# -------------------------------------------------
+#  CROUCH
+# -------------------------------------------------
 func crouch() -> void:
 	if collisionShape == null or collisionShapeCrouched == null:
-		return  # Exit if collision shapes are missing
-
-	# Check for crouch input and if the player is on the floor
+		return
 	if Input.is_action_pressed("crouch") and is_on_floor():
 		collisionShape.disabled = true
 		collisionShapeCrouched.disabled = false

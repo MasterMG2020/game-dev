@@ -225,7 +225,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_mxkhm")
 }],
-"loop": true,
+"loop": false,
 "name": &"crouch",
 "speed": 5.0
 }, {
@@ -274,7 +274,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_324fu")
 }],
-"loop": true,
+"loop": false,
 "name": &"dead",
 "speed": 7.0
 }, {
@@ -327,13 +327,10 @@ animations = [{
 }, {
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_wnfln")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_0lrrv")
 }],
 "loop": false,
 "name": &"jump",
-"speed": 8.0
+"speed": 16.01
 }, {
 "frames": [{
 "duration": 1.0,
@@ -383,8 +380,8 @@ animations = [{
 }]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_ulhfw"]
-radius = 22.0
-height = 118.0
+radius = 20.0
+height = 174.0
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_3ihyw"]
 radius = 26.0
@@ -402,12 +399,12 @@ script = ExtResource("1_ofpvf")
 position = Vector2(-120, -225)
 scale = Vector2(3.5, 3.5)
 sprite_frames = SubResource("SpriteFrames_81gkq")
-animation = &"landing"
+animation = &"crouch"
 autoplay = "idle"
 centered = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(-9, -60)
+position = Vector2(-9, -88)
 shape = SubResource("CapsuleShape2D_ulhfw")
 
 [node name="CollisionShape2D_crouched" type="CollisionShape2D" parent="."]
@@ -419,7 +416,7 @@ disabled = true
 [node name="AttackArea" type="Area2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
-position = Vector2(101, -73)
+position = Vector2(100, -76)
 shape = SubResource("RectangleShape2D_d5n18")
 disabled = true
 
