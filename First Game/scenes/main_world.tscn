@@ -7603,6 +7603,8 @@ position = Vector2(-530, -63)
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
 position = Vector2(2, -119)
+scale = Vector2(908852, 13.8076)
+zoom = Vector2(0.8, 0.8)
 
 [node name="Slime" parent="." instance=ExtResource("3_5bc4o")]
 position = Vector2(-257, 792)
