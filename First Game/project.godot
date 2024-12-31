@@ -60,7 +60,7 @@ attack={
 
 [physics]
 
-2d/default_gravity=1980.0
+2d/default_gravity=2300.0
 
 [rendering]
 
