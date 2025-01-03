@@ -1,4 +1,4 @@
-[gd_scene load_steps=54 format=3 uid="uid://dqnaqj8yb6hwd"]
+[gd_scene load_steps=55 format=3 uid="uid://dqnaqj8yb6hwd"]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_ofpvf"]
 [ext_resource type="Texture2D" uid="uid://bccdn66e2scp3" path="res://assets/sprites/Legacy FantasyAssets/Legacy-Fantasy - High Forest 2.0 (1)/Legacy-Fantasy - High Forest 2.3/Character/Jumlp-All/Jump-All-Sheet.png" id="2_3yrnn"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://ck4c36uok5a6t" path="res://assets/sprites/Legacy FantasyAssets/Legacy-Fantasy - High Forest 2.0 (1)/Legacy-Fantasy - High Forest 2.3/Character/Idle/Idle-Sheet.png" id="3_kvo0e"]
 [ext_resource type="Texture2D" uid="uid://dxyvdtl1q8g2j" path="res://assets/sprites/Legacy FantasyAssets/Legacy-Fantasy - High Forest 2.0 (1)/Legacy-Fantasy - High Forest 2.3/Character/Run/Run-Sheet.png" id="4_6k57l"]
 [ext_resource type="Texture2D" uid="uid://ckb8bannjw0tk" path="res://assets/sprites/Legacy FantasyAssets/Legacy-Fantasy - High Forest 2.0 (1)/Legacy-Fantasy - High Forest 2.3/Character/Dead/Dead-Sheet.png" id="4_e8ul1"]
+[ext_resource type="AudioStream" uid="uid://qmh1ks4mdajf" path="res://assets/sounds/Footsteps In Forest 01.wav" id="7_avv2w"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_1adiw"]
 atlas = ExtResource("2_x360g")
@@ -388,7 +389,7 @@ radius = 26.0
 height = 86.0
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_d5n18"]
-size = Vector2(202.5, 145)
+size = Vector2(230, 187.5)
 
 [node name="Player" type="CharacterBody2D"]
 z_index = 5
@@ -396,16 +397,17 @@ collision_layer = 2
 script = ExtResource("1_ofpvf")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
-position = Vector2(-120, -225)
+position = Vector2(-111, -223)
 scale = Vector2(3.5, 3.5)
 sprite_frames = SubResource("SpriteFrames_81gkq")
-animation = &"crouch"
+animation = &"falling"
 autoplay = "idle"
 centered = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(-9, -88)
+position = Vector2(-7, -88)
 shape = SubResource("CapsuleShape2D_ulhfw")
+debug_color = Color(7.70092e-07, 0.593055, 0.738321, 0.42)
 
 [node name="CollisionShape2D_crouched" type="CollisionShape2D" parent="."]
 position = Vector2(-9, -27)
@@ -416,9 +418,12 @@ disabled = true
 [node name="AttackArea" type="Area2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
-position = Vector2(100, -76)
+position = Vector2(-2, -97.25)
 shape = SubResource("RectangleShape2D_d5n18")
 disabled = true
+
+[node name="FootstepAudio" type="AudioStreamPlayer2D" parent="."]
+stream = ExtResource("7_avv2w")
 
 [connection signal="animation_changed" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_changed"]
 [connection signal="frame_changed" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_frame_changed"]

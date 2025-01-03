@@ -1,8 +1,10 @@
-[gd_scene load_steps=7 format=3 uid="uid://87xkdlshjrj7"]
+[gd_scene load_steps=9 format=3 uid="uid://87xkdlshjrj7"]
 
 [ext_resource type="Texture2D" uid="uid://ramcikufoedu" path="res://assets/sprites/Tilemap black 64pix.png" id="1_88nab"]
 [ext_resource type="PackedScene" uid="uid://dqnaqj8yb6hwd" path="res://scenes/player.tscn" id="2_l1qw8"]
 [ext_resource type="PackedScene" uid="uid://d2w2i5h0lhc6l" path="res://scenes/slime.tscn" id="3_5bc4o"]
+[ext_resource type="PackedScene" uid="uid://b65im5rr0dwjw" path="res://scenes/dash_powerup.tscn" id="4_qdsky"]
+[ext_resource type="PackedScene" uid="uid://bcxl1yerhc4lb" path="res://scenes/doublejump_powerup.tscn" id="5_8j3xg"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_iag23"]
 
@@ -7606,3 +7608,9 @@ position = Vector2(2, -119)
 
 [node name="Slime" parent="." instance=ExtResource("3_5bc4o")]
 position = Vector2(-257, 792)
+
+[node name="Dash_PowerUp" parent="." instance=ExtResource("4_qdsky")]
+position = Vector2(-803, -59)
+
+[node name="DJ_PowerUp" parent="." instance=ExtResource("5_8j3xg")]
+position = Vector2(-320, -83)
