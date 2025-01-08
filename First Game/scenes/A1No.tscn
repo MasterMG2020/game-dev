@@ -1,11 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://dlkdgm8vj38o4"]
+[gd_scene load_steps=6 format=3 uid="uid://bwrecnvssg07w"]
 
 [ext_resource type="Texture2D" uid="uid://ramcikufoedu" path="res://assets/sprites/Tilemap black 64pix.png" id="1_4cqde"]
 [ext_resource type="PackedScene" uid="uid://dqnaqj8yb6hwd" path="res://scenes/player.tscn" id="2_je1t5"]
 
-[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_iag23"]
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_gp3ce"]
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_7ue7j"]
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_igpen"]
 texture = ExtResource("1_4cqde")
 texture_region_size = Vector2i(64, 64)
 30:0/0 = 0
@@ -7584,8 +7584,8 @@ texture_region_size = Vector2i(64, 64)
 [sub_resource type="TileSet" id="TileSet_idthf"]
 tile_size = Vector2i(64, 64)
 physics_layer_0/collision_layer = 3
-physics_layer_0/physics_material = SubResource("PhysicsMaterial_iag23")
-sources/0 = SubResource("TileSetAtlasSource_7ue7j")
+physics_layer_0/physics_material = SubResource("PhysicsMaterial_gp3ce")
+sources/0 = SubResource("TileSetAtlasSource_igpen")
 
 [node name="A1No" type="Node2D"]
 
